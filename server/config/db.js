@@ -11,4 +11,14 @@ const db = new Pool({
   database: process.env.DB_DATABASE,
 });
 
+async function connectDb() {
+  try {
+    console.log("Berhasil terhubung ke database");
+  } catch (error) {
+    console.error("Gagal terhubung ke database", error);
+  }
+}
+
+connectDb();
+
 module.exports = db;
