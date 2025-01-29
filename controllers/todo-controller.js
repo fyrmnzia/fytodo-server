@@ -1,19 +1,23 @@
 const db = require("../config/db");
+const { v4: uuidv4 } = require("uuid");
 
 // CREATE
 exports.createTodo = async (req, res) => {
   try {
-    const { desc, completed, user_id } = req.body;
+    let { user_id, title, progress, date } = req.body;
+    const id = uuidv4();
+    title = title.trim();
 
-    const newData = await db.query(
-      "INSERT INTO todos_table (todo_desc, todo_completed, user_id) VALUES ($1, $2, $3) RETURNING *",
-      [desc, completed, user_id]
-    );
+    const newData = await db`
+      INSERT INTO todos (id, user_id, title, progress, date)
+      VALUES (${id}, ${user_id}, ${title}, ${progress}, ${date})
+      RETURNING *;
+    `;
 
     res.status(201).json({
       status: "Berhasil",
       message: "Todo berhasil dibuat",
-      data: { todo: newData.rows[0] },
+      data: { todo: newData[0] },
     });
   } catch (error) {
     res.status(500).json({
@@ -25,15 +29,15 @@ exports.createTodo = async (req, res) => {
   }
 };
 
-// READ
-exports.getAllTodo = async (req, res) => {
+// READ ALL TODOS
+exports.getAllTodos = async (req, res) => {
   try {
-    const data = await db.query("SELECT * FROM todos_table");
+    const data = await db`SELECT * FROM todos`;
 
     res.status(200).json({
       status: "Berhasil",
       message: "Berhasil membaca semua todo",
-      data: { todo: data.rows },
+      data: { todos: data },
     });
   } catch (error) {
     res.status(500).json({
@@ -44,16 +48,15 @@ exports.getAllTodo = async (req, res) => {
     });
   }
 };
+
+// READ SINGLE TODO
 exports.getTodo = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const data = await db.query(
-      "SELECT * FROM todos_table WHERE todo_id = $1",
-      [id]
-    );
+    const data = await db`SELECT * FROM todos WHERE id = ${id}`;
 
-    if (data.rowCount === 0) {
+    if (data.length === 0) {
       return res.status(404).json({
         status: "Gagal",
         message: `Todo dengan id ${id} tidak ditemukan`,
@@ -63,7 +66,7 @@ exports.getTodo = async (req, res) => {
     res.status(200).json({
       status: "Berhasil",
       message: "Berhasil membaca todo",
-      data: { todo: data.rows[0] },
+      data: { todo: data[0] },
     });
   } catch (error) {
     res.status(500).json({
@@ -74,19 +77,19 @@ exports.getTodo = async (req, res) => {
     });
   }
 };
+
+// READ TODOS BY USER
 exports.getUserTodos = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const data = await db.query(
-      "SELECT * FROM todos_table WHERE user_id = $1",
-      [id]
-    );
+    const data = await db`SELECT * FROM todos WHERE user_id = ${id}`;
+
     res.status(200).json({
       status: "Berhasil",
       message: "Berhasil membaca semua user todo",
-      result: data.rowCount,
-      data: { todo: data.rows },
+      result: data.length,
+      data: { todo: data },
     });
   } catch (error) {
     res.status(500).json({
@@ -98,21 +101,31 @@ exports.getUserTodos = async (req, res) => {
   }
 };
 
-// UPDATE
+// UPDATE TODO
 exports.updateTodo = async (req, res) => {
   try {
     const { id } = req.params;
-    const { desc, completed } = req.body;
+    let { user_id, title, progress, date } = req.body;
+    title = title.trim();
 
-    const upData = await db.query(
-      "UPDATE todos_table SET todo_desc=$1, todo_completed=$2 WHERE todo_id=$3",
-      [desc, completed, id]
-    );
+    const upData = await db`
+      UPDATE todos
+      SET user_id=${user_id}, title=${title}, progress=${progress}, date=${date}
+      WHERE id=${id}
+      RETURNING *;
+    `;
+
+    if (upData.length === 0) {
+      return res.status(404).json({
+        status: "Gagal",
+        message: `Todo dengan id ${id} tidak ditemukan`,
+      });
+    }
 
     res.status(200).json({
       status: "Berhasil",
       message: "Berhasil mengupdate todo",
-      data: { todo: upData.rows[0] },
+      data: { todo: upData[0] },
     });
   } catch (error) {
     res.status(500).json({
@@ -124,15 +137,19 @@ exports.updateTodo = async (req, res) => {
   }
 };
 
-// DELETE
+// DELETE TODO
 exports.deleteTodo = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const delData = await db.query(
-      "DELETE FROM todos_table WHERE todo_id = $1",
-      [id]
-    );
+    const deleted = await db`DELETE FROM todos WHERE id = ${id} RETURNING *`;
+
+    if (deleted.length === 0) {
+      return res.status(404).json({
+        status: "Gagal",
+        message: `Todo dengan id ${id} tidak ditemukan`,
+      });
+    }
 
     res.status(200).json({
       status: "Berhasil",

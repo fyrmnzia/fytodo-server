@@ -5,7 +5,7 @@ const router = express.Router();
 
 router
   .route("/")
-  .get(todoController.getAllTodo)
+  .get(todoController.getAllTodos)
   .post(todoController.createTodo);
 
 router
