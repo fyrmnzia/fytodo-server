@@ -19,7 +19,6 @@ app.get("/", async (req, res) => {
   try {
     const result = await db`SELECT version()`;
     res.json({ db_version: result[0].version });
-    res.send("fytodo-server");
   } catch (error) {
     res.status(500).json({
       error: "Gagal mengambil versi database",
